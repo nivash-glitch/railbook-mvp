@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, MapPin, Calendar, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
+import StationAutocomplete from "@/components/StationAutocomplete";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const SearchTrains = () => {
   const navigate = useNavigate();
@@ -49,37 +50,25 @@ const SearchTrains = () => {
             <CardContent className="pt-6">
               <form onSubmit={handleSearch} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="source" className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-primary" />
-                      From Station
-                    </Label>
-                    <Input
-                      id="source"
-                      type="text"
-                      placeholder="e.g., New Delhi"
-                      value={source}
-                      onChange={(e) => setSource(e.target.value)}
-                      className="h-12"
-                      required
-                    />
-                  </div>
+                  <StationAutocomplete
+                    id="source"
+                    label="From Station"
+                    placeholder="e.g., New Delhi, Mumbai, Bengaluru"
+                    value={source}
+                    onChange={setSource}
+                    icon={<MapPin className="h-4 w-4 text-primary" />}
+                    required
+                  />
 
-                  <div className="space-y-2">
-                    <Label htmlFor="destination" className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-accent" />
-                      To Station
-                    </Label>
-                    <Input
-                      id="destination"
-                      type="text"
-                      placeholder="e.g., Mumbai"
-                      value={destination}
-                      onChange={(e) => setDestination(e.target.value)}
-                      className="h-12"
-                      required
-                    />
-                  </div>
+                  <StationAutocomplete
+                    id="destination"
+                    label="To Station"
+                    placeholder="e.g., Chennai, Kolkata, Hyderabad"
+                    value={destination}
+                    onChange={setDestination}
+                    icon={<MapPin className="h-4 w-4 text-accent" />}
+                    required
+                  />
                 </div>
 
                 <div className="space-y-2">

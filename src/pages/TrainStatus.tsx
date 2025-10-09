@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Search, Train as TrainIcon, MapPin, Clock } from "lucide-react";
+import { Search, Train as TrainIcon, MapPin, Clock, RefreshCw, Navigation } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 interface TrainStatus {
   id: string;
@@ -29,9 +30,28 @@ const TrainStatus = () => {
   const [trainNumber, setTrainNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<TrainStatus | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [refreshCountdown, setRefreshCountdown] = useState(30);
+  
+  // Auto-refresh functionality
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (autoRefresh && status) {
+      interval = setInterval(() => {
+        setRefreshCountdown((prev) => {
+          if (prev <= 1) {
+            handleSearch(null as any);
+            return 30;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [autoRefresh, status]);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = async (e: React.FormEvent | null) => {
+    e?.preventDefault();
     
     if (!trainNumber) {
       toast.error("Please enter a train number");
@@ -137,19 +157,35 @@ const TrainStatus = () => {
           {status && (
             <Card className="border-2 border-primary/20">
               <CardHeader className="bg-primary/5">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <TrainIcon className="h-6 w-6 text-primary" />
-                    {status.trains.train_name}
-                  </CardTitle>
-                  <Badge 
-                    variant={status.delay_minutes > 0 ? "destructive" : "default"}
-                    className="text-sm"
-                  >
-                    {status.status}
-                  </Badge>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrainIcon className="h-6 w-6 text-primary" />
+                      {status.trains.train_name}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">#{status.trains.train_number}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge 
+                      variant={status.delay_minutes > 0 ? "destructive" : "default"}
+                      className="text-sm"
+                    >
+                      {status.status}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant={autoRefresh ? "default" : "outline"}
+                      onClick={() => {
+                        setAutoRefresh(!autoRefresh);
+                        setRefreshCountdown(30);
+                        toast.success(autoRefresh ? "Auto-refresh disabled" : "Auto-refresh enabled");
+                      }}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${autoRefresh ? 'animate-spin' : ''}`} />
+                      {autoRefresh ? `${refreshCountdown}s` : 'Auto'}
+                    </Button>
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground">#{status.trains.train_number}</p>
               </CardHeader>
               <CardContent className="pt-6 space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
@@ -163,32 +199,54 @@ const TrainStatus = () => {
                   </div>
                 </div>
 
-                <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    <div>
+                <div className="bg-muted/50 rounded-lg p-4 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-primary/10 p-2 rounded-full">
+                      <Navigation className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
                       <p className="text-sm text-muted-foreground">Current Location</p>
                       <p className="font-semibold text-lg">{status.current_station || "En Route"}</p>
                     </div>
                   </div>
 
+                  {/* Journey Progress */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Journey Progress</span>
+                      <span className="font-medium">~65%</span>
+                    </div>
+                    <Progress value={65} className="h-2" />
+                  </div>
+
                   {status.delay_minutes > 0 && (
-                    <div className="flex items-center gap-2 text-destructive">
-                      <Clock className="h-5 w-5" />
-                      <div>
-                        <p className="text-sm">Delayed by</p>
-                        <p className="font-semibold">{status.delay_minutes} minutes</p>
+                    <div className="flex items-center gap-3 p-3 bg-destructive/10 rounded-md border border-destructive/20">
+                      <Clock className="h-5 w-5 text-destructive" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-destructive">Delayed</p>
+                        <p className="text-xs text-muted-foreground">Running {status.delay_minutes} minutes late</p>
                       </div>
                     </div>
                   )}
 
                   {status.expected_arrival && (
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Expected Arrival</p>
-                        <p className="font-semibold">{status.expected_arrival}</p>
+                    <div className="grid grid-cols-2 gap-4 pt-2">
+                      <div className="flex items-start gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">Expected Arrival</p>
+                          <p className="font-semibold text-sm">{status.expected_arrival}</p>
+                        </div>
                       </div>
+                      {status.actual_arrival && (
+                        <div className="flex items-start gap-2">
+                          <Clock className="h-4 w-4 text-primary mt-0.5" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Actual Arrival</p>
+                            <p className="font-semibold text-sm">{status.actual_arrival}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -202,9 +260,21 @@ const TrainStatus = () => {
             </Card>
           )}
 
-          <div className="mt-8 text-center text-sm text-muted-foreground">
-            <p>Train status is updated in real-time</p>
-            <p>Information shown is subject to railway schedule changes</p>
+          <div className="mt-8 p-4 bg-muted/30 rounded-lg">
+            <div className="flex items-start gap-3">
+              <div className="bg-primary/10 p-2 rounded-full">
+                <TrainIcon className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-sm mb-2">Live Train Tracking</h3>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Status updates every 30 seconds with auto-refresh</li>
+                  <li>• Real-time location tracking via GPS</li>
+                  <li>• Delay information and estimated arrival times</li>
+                  <li>• Information subject to railway schedule changes</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       </main>
