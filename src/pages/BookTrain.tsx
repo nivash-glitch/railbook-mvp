@@ -60,11 +60,19 @@ const BookTrain = () => {
         .from("trains")
         .select("*")
         .eq("id", trainId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      
+      if (!data) {
+        toast.error("Train not found");
+        navigate("/");
+        return;
+      }
+      
       setTrain(data);
     } catch (error: any) {
+      console.error("Error fetching train:", error);
       toast.error("Failed to fetch train details");
       navigate("/");
     }
