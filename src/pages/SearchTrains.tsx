@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 
-interface Train {
+interface TrainData {
   id: string;
   train_number: string;
   train_name: string;
@@ -29,7 +29,7 @@ const SearchTrains = () => {
   const [source, setSource] = useState("");
   const [destination, setDestination] = useState("");
   const [date, setDate] = useState("");
-  const [popularTrains, setPopularTrains] = useState<Train[]>([]);
+  const [popularTrains, setPopularTrains] = useState<TrainData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,7 +47,8 @@ const SearchTrains = () => {
       if (error) throw error;
       setPopularTrains(data || []);
     } catch (error) {
-      console.error("Error fetching trains:", error);
+      console.error("Error fetching popular trains:", error);
+      toast.error("Failed to load popular trains");
     } finally {
       setLoading(false);
     }
@@ -166,62 +167,64 @@ const SearchTrains = () => {
           </div>
 
           <div className="mt-16">
-            <h2 className="text-2xl font-bold text-foreground mb-6">Popular Trains</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-8 text-center">
+              Popular Train Routes
+            </h2>
             {loading ? (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">Loading trains...</p>
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {popularTrains.map((train) => (
-                  <Card key={train.id} className="hover:shadow-lg transition-shadow">
+                  <Card key={train.id} className="hover:shadow-xl transition-shadow">
                     <CardContent className="pt-6">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Train className="h-5 w-5 text-primary" />
-                            <h3 className="font-bold text-lg">{train.train_name}</h3>
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Train className="h-5 w-5 text-primary" />
+                          <div>
+                            <h3 className="font-semibold text-lg">{train.train_name}</h3>
+                            <p className="text-sm text-muted-foreground">#{train.train_number}</p>
                           </div>
-                          <p className="text-sm text-muted-foreground">#{train.train_number}</p>
                         </div>
-                        <Badge variant="secondary">Available</Badge>
+                        <Badge variant="secondary">{train.duration}</Badge>
                       </div>
                       
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="text-sm text-muted-foreground">From</p>
-                            <p className="font-semibold">{train.source_station}</p>
-                            <p className="text-sm text-muted-foreground">{train.departure_time}</p>
-                          </div>
-                          <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                          <div className="text-right">
-                            <p className="text-sm text-muted-foreground">To</p>
-                            <p className="font-semibold">{train.destination_station}</p>
-                            <p className="text-sm text-muted-foreground">{train.arrival_time}</p>
-                          </div>
+                      <div className="space-y-3 mb-4">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-medium">{train.source_station}</span>
                         </div>
-
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 text-muted-foreground">
                           <Clock className="h-4 w-4" />
-                          <span>{train.duration}</span>
+                          <span className="text-sm">{train.departure_time}</span>
                         </div>
+                        <div className="border-l-2 border-dashed border-muted-foreground/30 ml-2 h-6"></div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-accent" />
+                          <span className="text-sm font-medium">{train.destination_station}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Clock className="h-4 w-4" />
+                          <span className="text-sm">{train.arrival_time}</span>
+                        </div>
+                      </div>
 
-                        <div className="flex justify-between items-center pt-2 border-t">
-                          <div>
-                            <p className="text-sm text-muted-foreground">Starting from</p>
-                            <p className="text-xl font-bold text-primary">₹{train.base_fare}</p>
-                          </div>
-                          <Button 
-                            onClick={() => {
-                              setSource(train.source_station);
-                              setDestination(train.destination_station);
-                              window.scrollTo({ top: 0, behavior: 'smooth' });
-                            }}
-                          >
-                            Select Route
-                          </Button>
+                      <div className="flex items-center justify-between pt-4 border-t">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Starting from</p>
+                          <p className="text-lg font-bold text-primary">₹{train.base_fare}</p>
                         </div>
+                        <Button 
+                          onClick={() => {
+                            setSource(train.source_station);
+                            setDestination(train.destination_station);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          size="sm"
+                        >
+                          Select Route
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
